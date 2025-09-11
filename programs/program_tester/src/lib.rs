@@ -11,7 +11,6 @@ pub struct NativeGasPaidForContractCallEvent {
     pub destination_address: String,
     pub payload_hash: [u8; 32],
     pub refund_address: Pubkey,
-    pub params: Vec<u8>,
     pub gas_fee_amount: u64,
 }
 
@@ -50,7 +49,6 @@ pub mod hello_world {
         destination_address: String,
         payload_hash: [u8; 32],
         refund_address: Pubkey,
-        params: Vec<u8>,
         gas_fee_amount: u64,
     ) -> Result<()> {
         let config_pda_key = ctx.accounts.config_pda.key();
@@ -61,7 +59,6 @@ pub mod hello_world {
             destination_address,
             payload_hash,
             refund_address,
-            params,
             gas_fee_amount,
         });
 
