@@ -26,11 +26,6 @@ fn serialize_string(value: &str, out: &mut Vec<u8>) {
     out.extend_from_slice(bytes);
 }
 
-fn serialize_vec_u8(value: &[u8], out: &mut Vec<u8>) {
-    out.extend_from_slice(&(value.len() as u32).to_le_bytes());
-    out.extend_from_slice(value);
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let rpc_url = "http://127.0.0.1:8899".to_string();
@@ -55,7 +50,6 @@ async fn main() -> Result<()> {
         arr
     };
     let refund_address = payer.pubkey();
-    let params = vec![1u8, 2, 3, 4, 5];
     let gas_fee_amount: u64 = 1_000;
 
     let mut data: Vec<u8> = Vec::with_capacity(8 + 128);
@@ -64,7 +58,6 @@ async fn main() -> Result<()> {
     serialize_string(&destination_address, &mut data);
     data.extend_from_slice(&payload_hash);
     data.extend_from_slice(refund_address.as_ref());
-    serialize_vec_u8(&params, &mut data);
     data.extend_from_slice(&gas_fee_amount.to_le_bytes());
 
     let accounts = vec![

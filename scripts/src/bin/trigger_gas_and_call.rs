@@ -97,7 +97,6 @@ async fn main() -> Result<()> {
     serialize_string(&destination_address, &mut data_pay_native);
     data_pay_native.extend_from_slice(&payload_hash);
     data_pay_native.extend_from_slice(refund_address.as_ref());
-    serialize_vec_u8(&payload, &mut data_pay_native); // params
     data_pay_native.extend_from_slice(&gas_fee_amount.to_le_bytes());
 
     let accounts_pay_native = vec![

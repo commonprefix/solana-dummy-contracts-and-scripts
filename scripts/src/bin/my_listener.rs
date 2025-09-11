@@ -114,12 +114,6 @@ async fn main() -> anyhow::Result<()> {
                                             Some(std::str::from_utf8(s).ok()?.to_string())
                                         }
 
-                                        fn read_vec_u8(bytes: &[u8], i: &mut usize) -> Option<Vec<u8>> {
-                                            let len = read_u32(bytes, i)? as usize;
-                                            let s = take_slice(bytes, i, len)?;
-                                            Some(s.to_vec())
-                                        }
-
                                         let config_pda = match read_pubkey(&bytes, &mut i) { Some(v) => v, None => continue };
                                         let destination_chain = match read_string(&bytes, &mut i) { Some(v) => v, None => continue };
                                         let destination_address = match read_string(&bytes, &mut i) { Some(v) => v, None => continue };
@@ -132,7 +126,6 @@ async fn main() -> anyhow::Result<()> {
                                             None => continue,
                                         };
                                         let refund_address = match read_pubkey(&bytes, &mut i) { Some(v) => v, None => continue };
-                                        let params = match read_vec_u8(&bytes, &mut i) { Some(v) => v, None => continue };
                                         let gas_fee_amount = match take_slice(&bytes, &mut i, 8) {
                                             Some(s) => {
                                                 let mut gasb = [0u8; 8];
@@ -148,7 +141,6 @@ async fn main() -> anyhow::Result<()> {
                                         println!("  destination_address: {}", destination_address);
                                         println!("  payload_hash[0..4]: {:?}", &payload_hash[..4]);
                                         println!("  refund_address: {}", refund_address);
-                                        println!("  params: {:?}", params);
                                         println!("  gas_fee_amount: {}", gas_fee_amount);
                                     }
                                 }
