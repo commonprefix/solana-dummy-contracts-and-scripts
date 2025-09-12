@@ -25,9 +25,8 @@ bs58 = "0.4"
 [lib]
 name = "scripts"
 path = "src/lib.rs"
-crate-type = ["lib"]
+crate-type = ["cdylib", "lib"]
 
-# Binaries copied from hello_world
 [[bin]]
 name = "transaction_maker"
 path = "src/bin/transaction_maker.rs"
@@ -63,3 +62,7 @@ path = "src/bin/trigger_gas_add.rs"
 [[bin]]
 name = "trigger_gas_and_call"
 path = "src/bin/trigger_gas_and_call.rs"
+
+[[bin]]
+name = "trigger_approve_message"
+path = "src/bin/trigger_approve_message.rs"

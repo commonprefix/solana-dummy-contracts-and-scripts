@@ -10,7 +10,7 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{read_keypair_file, Signer};
 use solana_sdk::transaction::Transaction;
 
-const CONFIG_SEED: &[u8] = b"gas-service";
+const CONFIG_SEED: &[u8] = b"config";
 
 const EVENT_IX_TAG_LE: [u8; 8] = [0xe4, 0x45, 0xa5, 0x2e, 0x51, 0xcb, 0x9a, 0x1d];
 

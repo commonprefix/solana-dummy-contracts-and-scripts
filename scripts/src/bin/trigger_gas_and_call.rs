@@ -62,6 +62,9 @@ async fn main() -> Result<()> {
     let (config_pda, _bump) = Pubkey::find_program_address(&[b"config"], &program_id);
     let (event_authority, _ea_bump) =
         Pubkey::find_program_address(&[b"__event_authority"], &program_id);
+    let (gateway_root_pda, _gw_bump) = Pubkey::find_program_address(&[b"gateway"], &program_id);
+    let (signing_pda, _sig_bump) =
+        Pubkey::find_program_address(&[b"gtw-call-contract"], &program_id);
 
     let destination_chain = std::env::var("DEST_CHAIN").unwrap_or_else(|_| "ethereum".to_string());
     let destination_address = std::env::var("DEST_ADDRESS")
@@ -114,7 +117,28 @@ async fn main() -> Result<()> {
         data: data_pay_native,
     };
 
-    let mut data_call: Vec<u8> = Vec::with_capacity(8 + 128);
+    // Ensure GatewayConfig exists for call_contract
+    if rpc.get_account(&gateway_root_pda).await.is_err() {
+        let ix_init_gateway = Instruction {
+            program_id,
+            accounts: vec![
+                AccountMeta::new(payer.pubkey(), true),
+                AccountMeta::new(gateway_root_pda, false),
+                AccountMeta::new_readonly(system_program::id(), false),
+            ],
+            data: anchor_sighash("init_gateway_root").to_vec(),
+        };
+        let recent_blockhash = rpc.get_latest_blockhash().await?;
+        let mut tx = Transaction::new_with_payer(&[ix_init_gateway], Some(&payer.pubkey()));
+        tx.sign(&[&payer], recent_blockhash);
+        let sig = rpc.send_and_confirm_transaction(&tx).await?;
+        println!(
+            "Initialized gateway_root_pda: {} (tx {})",
+            gateway_root_pda, sig
+        );
+    }
+
+    let mut data_call: Vec<u8> = Vec::with_capacity(8 + 256);
     data_call.extend_from_slice(&anchor_sighash("call_contract"));
     serialize_string(&destination_chain, &mut data_call);
     serialize_string(&destination_address, &mut data_call); // destination_contract_address
@@ -122,7 +146,11 @@ async fn main() -> Result<()> {
     serialize_vec_u8(&payload, &mut data_call);
 
     let accounts_call = vec![
-        AccountMeta::new(payer.pubkey(), true), // payer: Signer, mut
+        // CallContract accounts
+        AccountMeta::new_readonly(system_program::id(), false), // calling_program (any executable prog)
+        AccountMeta::new_readonly(signing_pda, false),          // signing_pda (dummy PDA)
+        AccountMeta::new_readonly(gateway_root_pda, false),     // GatewayConfig
+        // Event CPI injected accounts (must be last two)
         AccountMeta::new_readonly(event_authority, false),
         AccountMeta::new_readonly(program_id, false),
     ];
