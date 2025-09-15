@@ -4,14 +4,13 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use sha2::{Digest, Sha256};
 use solana_client::nonblocking::rpc_client::RpcClient;
-// use solana_client::rpc_response::Response as RpcResponse;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::instruction::{AccountMeta, Instruction};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{read_keypair_file, Signer};
 use solana_sdk::{system_program, transaction::Transaction};
 
-const CONFIG_SEED: &[u8] = b"config";
+const GATEWAY_SEED: &[u8] = b"gateway";
 
 fn anchor_method_discriminator(name: &str) -> [u8; 8] {
     let mut hasher = Sha256::new();
@@ -43,7 +42,7 @@ async fn main() -> Result<()> {
 
     let rpc = RpcClient::new_with_commitment(rpc_url, CommitmentConfig::confirmed());
 
-    let (config_pda, _bump) = Pubkey::find_program_address(&[CONFIG_SEED], &program_id);
+    let (gateway_root_pda, _bump) = Pubkey::find_program_address(&[GATEWAY_SEED], &program_id);
     let (event_authority, _ea_bump) =
         Pubkey::find_program_address(&[b"__event_authority"], &program_id);
 
@@ -59,26 +58,81 @@ async fn main() -> Result<()> {
         arr
     };
 
-    let refund_address = payer.pubkey();
     let gas_fee_amount: u64 = std::env::var("GAS_FEE_AMOUNT")
         .ok()
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or(1_000);
 
-    // Build pay_native_for_contract_call
-    let mut data = Vec::with_capacity(8 + 256);
-    data.extend_from_slice(&anchor_method_discriminator("pay_native_for_contract_call"));
-    serialize_string(&destination_chain, &mut data);
-    serialize_string(&destination_address, &mut data);
+    // Step 1: Call contract without gas payment
+    println!("Step 1: Calling contract...");
+    let call_contract_sig = call_contract(
+        &rpc,
+        &payer,
+        program_id,
+        &event_authority,
+        &gateway_root_pda,
+        &destination_chain,
+        &destination_address,
+        payload_hash,
+        payload.clone(),
+    )
+    .await?;
+    println!("Call contract tx: {}", call_contract_sig);
+
+    // Step 2: Add native gas for the contract call
+    println!("Step 2: Adding native gas...");
+    let mut tx_hash = [0u8; 64];
+    tx_hash.copy_from_slice(call_contract_sig.as_ref());
+    let log_index = 0u64; // Using 0 as the log index for the call_contract event
+    let refund_address = payer.pubkey();
+
+    let add_gas_sig = add_native_gas(
+        &rpc,
+        &payer,
+        program_id,
+        &event_authority,
+        &gateway_root_pda,
+        tx_hash,
+        log_index,
+        gas_fee_amount,
+        refund_address,
+    )
+    .await?;
+    println!("Add native gas tx: {}", add_gas_sig);
+
+    println!("Successfully completed call_contract followed by add_native_gas!");
+    println!("Contract call tx hash: {:?}", tx_hash);
+    println!("Gas amount added: {}", gas_fee_amount);
+
+    Ok(())
+}
+
+async fn call_contract(
+    rpc: &RpcClient,
+    payer: &solana_sdk::signature::Keypair,
+    program_id: Pubkey,
+    event_authority: &Pubkey,
+    gateway_root_pda: &Pubkey,
+    destination_chain: &str,
+    destination_contract_address: &str,
+    payload_hash: [u8; 32],
+    payload: Vec<u8>,
+) -> Result<solana_sdk::signature::Signature> {
+    let mut data = Vec::new();
+    data.extend_from_slice(&anchor_method_discriminator("call_contract"));
+    serialize_string(destination_chain, &mut data);
+    serialize_string(destination_contract_address, &mut data);
     data.extend_from_slice(&payload_hash);
-    data.extend_from_slice(refund_address.as_ref());
-    data.extend_from_slice(&gas_fee_amount.to_le_bytes());
+
+    // Serialize payload as Vec<u8>
+    data.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+    data.extend_from_slice(&payload);
 
     let accounts = vec![
-        AccountMeta::new(payer.pubkey(), true),
-        AccountMeta::new_readonly(config_pda, false),
-        AccountMeta::new_readonly(system_program::id(), false),
-        AccountMeta::new_readonly(event_authority, false),
+        AccountMeta::new_readonly(payer.pubkey(), false), // calling_program
+        AccountMeta::new_readonly(payer.pubkey(), false), // signing_pda (using payer as dummy)
+        AccountMeta::new_readonly(*gateway_root_pda, false),
+        AccountMeta::new_readonly(*event_authority, false),
         AccountMeta::new_readonly(program_id, false),
     ];
 
@@ -88,10 +142,42 @@ async fn main() -> Result<()> {
         data,
     };
 
-    let sig = send_ix(&rpc, &payer, &[ix]).await?;
-    println!("Sent pay_native_for_contract_call tx: {}", sig);
+    send_ix(rpc, payer, &[ix]).await
+}
 
-    Ok(())
+async fn add_native_gas(
+    rpc: &RpcClient,
+    payer: &solana_sdk::signature::Keypair,
+    program_id: Pubkey,
+    event_authority: &Pubkey,
+    config_pda: &Pubkey,
+    tx_hash: [u8; 64],
+    log_index: u64,
+    gas_fee_amount: u64,
+    refund_address: Pubkey,
+) -> Result<solana_sdk::signature::Signature> {
+    let mut data = Vec::new();
+    data.extend_from_slice(&anchor_method_discriminator("add_native_gas"));
+    data.extend_from_slice(&tx_hash);
+    data.extend_from_slice(&log_index.to_le_bytes());
+    data.extend_from_slice(&gas_fee_amount.to_le_bytes());
+    data.extend_from_slice(refund_address.as_ref());
+
+    let accounts = vec![
+        AccountMeta::new(payer.pubkey(), true),        // sender
+        AccountMeta::new_readonly(*config_pda, false), // config_pda
+        AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(*event_authority, false),
+        AccountMeta::new_readonly(program_id, false),
+    ];
+
+    let ix = Instruction {
+        program_id,
+        accounts,
+        data,
+    };
+
+    send_ix(rpc, payer, &[ix]).await
 }
 
 async fn send_ix(

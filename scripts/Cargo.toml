@@ -66,3 +66,8 @@ path = "src/bin/trigger_gas_and_call.rs"
 [[bin]]
 name = "trigger_approve_message"
 path = "src/bin/trigger_approve_message.rs"
+
+[[bin]]
+name = "trigger_execute_message"
+path = "src/bin/trigger_execute_message.rs"
+

@@ -42,7 +42,34 @@ pub struct NativeGasRefundedEvent {
 
 #[event]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct NativeGasAddedEvent {
+    /// The Gas service config PDA
+    pub config_pda: Pubkey,
+    /// Solana transaction signature
+    pub tx_hash: [u8; 64],
+    /// The log index
+    pub log_index: u64,
+    /// The receiver of the refund
+    pub refund_address: Pubkey,
+    /// amount of SOL added
+    pub gas_fee_amount: u64,
+}
+
+#[event]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MessageApprovedEvent {
+    pub command_id: [u8; 32],
+    pub destination_address: Pubkey,
+    pub payload_hash: [u8; 32],
+    pub source_chain: String,
+    pub message_id: String,
+    pub source_address: String,
+    pub destination_chain: String,
+}
+
+#[event]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct MessageExecuted {
     pub command_id: [u8; 32],
     pub destination_address: Pubkey,
     pub payload_hash: [u8; 32],
@@ -96,6 +123,25 @@ pub mod program_tester {
         Ok(())
     }
 
+    pub fn add_native_gas(
+        ctx: Context<AddNativeGas>,
+        tx_hash: [u8; 64],
+        log_index: u64,
+        gas_fee_amount: u64,
+        refund_address: Pubkey,
+    ) -> Result<()> {
+        // Simply emit the event without any on-chain logic (mocked version)
+        anchor_lang::prelude::emit_cpi!(NativeGasAddedEvent {
+            config_pda: ctx.accounts.config_pda.key(),
+            tx_hash,
+            log_index,
+            refund_address,
+            gas_fee_amount,
+        });
+
+        Ok(())
+    }
+
     pub fn call_contract(
         ctx: Context<CallContract>,
         destination_chain: String,
@@ -121,6 +167,18 @@ pub mod program_tester {
         let cc_id = &message.leaf.message.cc_id;
         let destination_address =
             Pubkey::from_str(&message.leaf.message.destination_address).unwrap();
+
+        // Initialize the incoming message account
+        ctx.accounts
+            .incoming_message_pda
+            .set_inner(IncomingMessage {
+                bump: ctx.bumps.incoming_message_pda,
+                signing_pda_bump: 0, // dummy value for now
+                status: MessageStatus::approved(),
+                message_hash: message.leaf.message.hash(),
+                payload_hash: message.leaf.message.payload_hash,
+            });
+
         anchor_lang::prelude::emit_cpi!(MessageApprovedEvent {
             command_id: message.leaf.message.command_id(),
             destination_address,
@@ -129,6 +187,31 @@ pub mod program_tester {
             message_id: cc_id.id.clone(),
             source_address: message.leaf.message.source_address.clone(),
             destination_chain: message.leaf.message.destination_chain.clone(),
+        });
+        Ok(())
+    }
+
+    pub fn execute_message(
+        ctx: Context<ExecuteMessage>,
+        command_id: [u8; 32],
+        source_chain: String,
+        message_id: String,
+        source_address: String,
+        destination_chain: String,
+        destination_address: String,
+        payload_hash: [u8; 32],
+    ) -> Result<()> {
+        let destination_pubkey = Pubkey::from_str(&destination_address).unwrap();
+
+        // Simply emit the event without any on-chain logic checks
+        anchor_lang::prelude::emit_cpi!(MessageExecuted {
+            command_id,
+            destination_address: destination_pubkey,
+            payload_hash,
+            source_chain,
+            message_id,
+            source_address,
+            destination_chain,
         });
         Ok(())
     }
@@ -170,6 +253,7 @@ pub struct PayNativeForContractCall<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    /// CHECK: This account is used as a configuration PDA for event emission only
     pub config_pda: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
@@ -178,8 +262,20 @@ pub struct PayNativeForContractCall<'info> {
 #[event_cpi]
 #[derive(Accounts)]
 pub struct RefundNativeFees<'info> {
+    /// CHECK: This account is used as a configuration PDA for event emission only
     pub config_pda: UncheckedAccount<'info>,
+    /// CHECK: This account is used as a receiver address for refund operations
     pub receiver: UncheckedAccount<'info>,
+}
+
+#[event_cpi]
+#[derive(Accounts)]
+pub struct AddNativeGas<'info> {
+    #[account(mut)]
+    pub sender: Signer<'info>,
+    /// CHECK: This account is used as a configuration PDA for event emission only
+    pub config_pda: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -189,6 +285,7 @@ pub struct CallContract<'info> {
     /// CHECK: Anchor constraint verifies this is an executable program
     pub calling_program: UncheckedAccount<'info>,
     /// The standardized PDA that must sign - derived from the calling program
+    /// CHECK: This account is a PDA derived from the calling program for signing purposes
     pub signing_pda: UncheckedAccount<'info>,
     /// The gateway configuration PDA being initialized
     #[account()]
@@ -275,6 +372,14 @@ pub struct ApproveMessage<'info> {
         bump
     )]
     pub incoming_message_pda: Account<'info, IncomingMessage>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[event_cpi]
+pub struct ExecuteMessage<'info> {
+    #[account(mut)]
+    pub funder: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
