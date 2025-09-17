@@ -71,3 +71,18 @@ path = "src/bin/trigger_approve_message.rs"
 name = "trigger_execute_message"
 path = "src/bin/trigger_execute_message.rs"
 
+[[bin]]
+name = "trigger_deployment_started"
+path = "src/bin/trigger_deployment_started.rs"
+
+[[bin]]
+name = "trigger_interchain_transfer"
+path = "src/bin/trigger_interchain_transfer.rs"
+
+[[bin]]
+name = "trigger_metadata_registered"
+path = "src/bin/trigger_metadata_registered.rs"
+
+[[bin]]
+name = "trigger_link_token_started"
+path = "src/bin/trigger_link_token_started.rs"

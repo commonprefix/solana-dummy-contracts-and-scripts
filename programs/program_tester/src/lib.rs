@@ -79,6 +79,47 @@ pub struct MessageExecuted {
     pub destination_chain: String,
 }
 
+#[event]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct InterchainTransfer {
+    pub token_id: [u8; 32],
+    pub source_address: Pubkey,
+    pub source_token_account: Pubkey,
+    pub destination_chain: String,
+    pub destination_address: Vec<u8>,
+    pub amount: u64,
+    pub data_hash: [u8; 32],
+}
+
+#[event]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LinkTokenStarted {
+    pub token_id: [u8; 32],
+    pub destination_chain: String,
+    pub source_token_address: Pubkey,
+    pub destination_token_address: Vec<u8>,
+    pub token_manager_type: u8,
+    pub params: Vec<u8>,
+}
+
+#[event]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct InterchainTokenDeploymentStarted {
+    pub token_id: [u8; 32],
+    pub token_name: String,
+    pub token_symbol: String,
+    pub token_decimals: u8,
+    pub minter: Vec<u8>,
+    pub destination_chain: String,
+}
+
+#[event]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TokenMetadataRegistered {
+    pub token_address: Pubkey,
+    pub decimals: u8,
+}
+
 #[program]
 pub mod program_tester {
     use std::str::FromStr;
@@ -245,6 +286,80 @@ pub mod program_tester {
             });
         Ok(())
     }
+
+    pub fn interchain_transfer(
+        ctx: Context<InterchainTransferCtx>,
+        token_id: [u8; 32],
+        source_address: Pubkey,
+        source_token_account: Pubkey,
+        destination_chain: String,
+        destination_address: Vec<u8>,
+        amount: u64,
+        data_hash: [u8; 32],
+    ) -> Result<()> {
+        anchor_lang::prelude::emit_cpi!(InterchainTransfer {
+            token_id,
+            source_address,
+            source_token_account,
+            destination_chain,
+            destination_address,
+            amount,
+            data_hash,
+        });
+        Ok(())
+    }
+
+    pub fn link_token_started(
+        ctx: Context<LinkTokenStartedCtx>,
+        token_id: [u8; 32],
+        destination_chain: String,
+        source_token_address: Pubkey,
+        destination_token_address: Vec<u8>,
+        token_manager_type: u8,
+        params: Vec<u8>,
+    ) -> Result<()> {
+        anchor_lang::prelude::emit_cpi!(LinkTokenStarted {
+            token_id,
+            destination_chain,
+            source_token_address,
+            destination_token_address,
+            token_manager_type,
+            params,
+        });
+        Ok(())
+    }
+
+    pub fn interchain_token_deployment_started(
+        ctx: Context<InterchainTokenDeploymentStartedCtx>,
+        token_id: [u8; 32],
+        token_name: String,
+        token_symbol: String,
+        token_decimals: u8,
+        minter: Vec<u8>,
+        destination_chain: String,
+    ) -> Result<()> {
+        anchor_lang::prelude::emit_cpi!(InterchainTokenDeploymentStarted {
+            token_id,
+            token_name,
+            token_symbol,
+            token_decimals,
+            minter,
+            destination_chain,
+        });
+        Ok(())
+    }
+
+    pub fn token_metadata_registered(
+        ctx: Context<TokenMetadataRegisteredCtx>,
+        token_address: Pubkey,
+        decimals: u8,
+    ) -> Result<()> {
+        anchor_lang::prelude::emit_cpi!(TokenMetadataRegistered {
+            token_address,
+            decimals
+        });
+        Ok(())
+    }
 }
 
 #[event_cpi]
@@ -381,6 +496,34 @@ pub struct ExecuteMessage<'info> {
     #[account(mut)]
     pub funder: Signer<'info>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[event_cpi]
+pub struct InterchainTransferCtx<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+#[event_cpi]
+pub struct LinkTokenStartedCtx<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+#[event_cpi]
+pub struct InterchainTokenDeploymentStartedCtx<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+#[event_cpi]
+pub struct TokenMetadataRegisteredCtx<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, AnchorDeserialize, AnchorSerialize)]
