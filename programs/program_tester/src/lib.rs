@@ -120,6 +120,13 @@ pub struct TokenMetadataRegistered {
     pub decimals: u8,
 }
 
+#[event]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LogSignersRotatedMessage {
+    pub signers_hash: String,
+    pub epoch: u64,
+}
+
 #[program]
 pub mod program_tester {
     use std::str::FromStr;
@@ -360,6 +367,18 @@ pub mod program_tester {
         });
         Ok(())
     }
+
+    pub fn signers_rotated(
+        ctx: Context<SignersRotatedCtx>,
+        signers_hash: String,
+        epoch: u64,
+    ) -> Result<()> {
+        anchor_lang::prelude::emit_cpi!(LogSignersRotatedMessage {
+            signers_hash,
+            epoch,
+        });
+        Ok(())
+    }
 }
 
 #[event_cpi]
@@ -522,6 +541,13 @@ pub struct InterchainTokenDeploymentStartedCtx<'info> {
 #[derive(Accounts)]
 #[event_cpi]
 pub struct TokenMetadataRegisteredCtx<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+#[event_cpi]
+pub struct SignersRotatedCtx<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 }
