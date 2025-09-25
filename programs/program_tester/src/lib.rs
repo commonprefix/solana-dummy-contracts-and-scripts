@@ -120,11 +120,16 @@ pub struct TokenMetadataRegistered {
     pub decimals: u8,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, AnchorSerialize, AnchorDeserialize)]
+pub struct U256(pub [u8; 32]);
+
 #[event]
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct LogSignersRotatedMessage {
-    pub signers_hash: String,
-    pub epoch: u64,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VerifierSetRotatedEvent {
+    /// The epoch number as a 256-bit integer in little-endian format
+    pub epoch: U256,
+    /// Hash of the new verifier set
+    pub verifier_set_hash: [u8; 32],
 }
 
 #[program]
@@ -370,12 +375,12 @@ pub mod program_tester {
 
     pub fn signers_rotated(
         ctx: Context<SignersRotatedCtx>,
-        signers_hash: String,
-        epoch: u64,
+        epoch_le: [u8; 32],
+        verifier_set_hash: [u8; 32],
     ) -> Result<()> {
-        anchor_lang::prelude::emit_cpi!(LogSignersRotatedMessage {
-            signers_hash,
-            epoch,
+        anchor_lang::prelude::emit_cpi!(VerifierSetRotatedEvent {
+            epoch: U256(epoch_le),
+            verifier_set_hash,
         });
         Ok(())
     }

@@ -10,6 +10,19 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{read_keypair_file, Signer};
 use solana_sdk::transaction::Transaction;
 
+fn decode_hex(input: &str) -> Option<Vec<u8>> {
+    let s = input.strip_prefix("0x").unwrap_or(input);
+    if s.len() % 2 != 0 {
+        return None;
+    }
+    let mut out = Vec::with_capacity(s.len() / 2);
+    for i in (0..s.len()).step_by(2) {
+        let byte = u8::from_str_radix(&s[i..i + 2], 16).ok()?;
+        out.push(byte);
+    }
+    Some(out)
+}
+
 fn anchor_method_discriminator(name: &str) -> [u8; 8] {
     // Anchor method discriminator = sha256("global:<method_name>")[..8]
     let mut hasher = Sha256::new();
@@ -54,27 +67,40 @@ async fn main() -> Result<()> {
     let (event_authority, _ea_bump) =
         Pubkey::find_program_address(&[b"__event_authority"], &program_id);
 
-    let signers_hash = std::env::var("SIGNERS_HASH")
-        .unwrap_or_else(|_| "0x1234567890abcdef1234567890abcdef12345678".to_string());
-    let epoch: u64 = std::env::var("EPOCH")
+    // Verifier set hash as 32-byte value (hex string like 0x...)
+    let verifier_set_hash_hex = std::env::var("VERIFIER_SET_HASH")
+        .or_else(|_| std::env::var("SIGNERS_HASH"))
+        .unwrap_or_else(|_| {
+            "0x1111111111111111111111111111111111111111111111111111111111111111".to_string()
+        });
+    let verifier_set_hash_raw = decode_hex(&verifier_set_hash_hex)
+        .ok_or_else(|| anyhow!("invalid VERIFIER_SET_HASH hex"))?;
+    let mut verifier_set_hash = [0u8; 32];
+    let copy_len = verifier_set_hash_raw.len().min(32);
+    verifier_set_hash[..copy_len].copy_from_slice(&verifier_set_hash_raw[..copy_len]);
+
+    // Epoch as u64, packed little-endian into 32 bytes (U256 LE)
+    let epoch_dec: u64 = std::env::var("EPOCH")
         .ok()
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or(42);
+    let mut epoch_le = [0u8; 32];
+    epoch_le[..8].copy_from_slice(&epoch_dec.to_le_bytes());
 
     let ix = build_signers_rotated_ix(
         &program_id,
         &payer.pubkey(),
         &event_authority,
-        &signers_hash,
-        epoch,
+        &epoch_le,
+        &verifier_set_hash,
     )?;
 
     let sig = send_ix(&rpc, &payer, &[ix]).await?;
     println!("Sent signers_rotated tx: {}", sig);
 
-    let rotated_disc = anchor_event_struct_discriminator("LogSignersRotatedMessage");
+    let rotated_disc = anchor_event_struct_discriminator("VerifierSetRotatedEvent");
     println!(
-        "LogSignersRotatedMessage discriminator: {:#04x?}",
+        "VerifierSetRotatedEvent discriminator: {:#04x?}",
         rotated_disc
     );
 
@@ -85,8 +111,8 @@ fn build_signers_rotated_ix(
     program_id: &Pubkey,
     payer: &Pubkey,
     event_authority: &Pubkey,
-    signers_hash: &str,
-    epoch: u64,
+    epoch_le: &[u8; 32],
+    verifier_set_hash: &[u8; 32],
 ) -> Result<Instruction> {
     let accounts = vec![
         AccountMeta::new(*payer, true), // payer: Signer, mut
@@ -95,10 +121,10 @@ fn build_signers_rotated_ix(
     ];
 
     let disc = anchor_method_discriminator("signers_rotated");
-    let mut data = Vec::with_capacity(8 + 4 + signers_hash.len() + 8);
+    let mut data = Vec::with_capacity(8 + 32 + 32);
     data.extend_from_slice(&disc);
-    serialize_string(signers_hash, &mut data);
-    data.extend_from_slice(&epoch.to_le_bytes());
+    data.extend_from_slice(epoch_le);
+    data.extend_from_slice(verifier_set_hash);
 
     Ok(Instruction {
         program_id: *program_id,
