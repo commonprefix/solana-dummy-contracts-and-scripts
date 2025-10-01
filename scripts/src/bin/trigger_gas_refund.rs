@@ -37,9 +37,11 @@ fn anchor_method_discriminator(name: &str) -> [u8; 8] {
 #[tokio::main]
 async fn main() -> Result<()> {
     let rpc_url = std::env::var("RPC_URL").unwrap_or_else(|_| "http://127.0.0.1:8899".to_string());
+
+    // Gas service program ID
     let program_id = Pubkey::from_str(
-        &std::env::var("PROGRAM_ID")
-            .unwrap_or_else(|_| "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc".to_string()),
+        &std::env::var("GAS_PROGRAM_ID")
+            .unwrap_or_else(|_| "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP".to_string()),
     )?;
 
     let payer_path = std::env::var("PAYER")

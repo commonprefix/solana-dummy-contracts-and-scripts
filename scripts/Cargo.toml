@@ -87,3 +87,15 @@ path = "src/bin/trigger_metadata_registered.rs"
 [[bin]]
 name = "trigger_link_token_started"
 path = "src/bin/trigger_link_token_started.rs"
+
+[[bin]]
+name = "trigger_call_contract"
+path = "src/bin/trigger_call_contract.rs"
+
+[[bin]]
+name = "trigger_signers_rotated"
+path = "src/bin/trigger_signers_rotated.rs"
+
+[[bin]]
+name = "initialize_programs"
+path = "src/bin/initialize_programs.rs"

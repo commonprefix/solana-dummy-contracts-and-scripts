@@ -30,8 +30,16 @@ fn serialize_string(value: &str, out: &mut Vec<u8>) {
 #[tokio::main]
 async fn main() -> Result<()> {
     let rpc_url = std::env::var("RPC_URL").unwrap_or_else(|_| "http://127.0.0.1:8899".to_string());
-    let program_id = Pubkey::from_str(
-        &std::env::var("PROGRAM_ID")
+
+    // Gas service program ID
+    let gas_program_id = Pubkey::from_str(
+        &std::env::var("GAS_PROGRAM_ID")
+            .unwrap_or_else(|_| "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP".to_string()),
+    )?;
+
+    // Gateway program ID (for call_contract)
+    let gateway_program_id = Pubkey::from_str(
+        &std::env::var("GATEWAY_PROGRAM_ID")
             .unwrap_or_else(|_| "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc".to_string()),
     )?;
 
@@ -42,9 +50,12 @@ async fn main() -> Result<()> {
 
     let rpc = RpcClient::new_with_commitment(rpc_url, CommitmentConfig::confirmed());
 
-    let (gateway_root_pda, _bump) = Pubkey::find_program_address(&[GATEWAY_SEED], &program_id);
-    let (event_authority, _ea_bump) =
-        Pubkey::find_program_address(&[b"__event_authority"], &program_id);
+    let (gateway_root_pda, _bump) =
+        Pubkey::find_program_address(&[GATEWAY_SEED], &gateway_program_id);
+    let (gas_event_authority, _ea_bump) =
+        Pubkey::find_program_address(&[b"__event_authority"], &gas_program_id);
+    let (gateway_event_authority, _gw_ea_bump) =
+        Pubkey::find_program_address(&[b"__event_authority"], &gateway_program_id);
 
     let destination_chain = std::env::var("DEST_CHAIN").unwrap_or_else(|_| "ethereum".to_string());
     let destination_address = std::env::var("DEST_ADDRESS")
@@ -68,8 +79,8 @@ async fn main() -> Result<()> {
     let call_contract_sig = call_contract(
         &rpc,
         &payer,
-        program_id,
-        &event_authority,
+        gateway_program_id,
+        &gateway_event_authority,
         &gateway_root_pda,
         &destination_chain,
         &destination_address,
@@ -97,8 +108,8 @@ async fn main() -> Result<()> {
     let add_gas_sig = add_native_gas(
         &rpc,
         &payer,
-        program_id,
-        &event_authority,
+        gas_program_id,
+        &gas_event_authority,
         &gateway_root_pda,
         tx_hash,
         log_index,

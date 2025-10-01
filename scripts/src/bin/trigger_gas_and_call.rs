@@ -47,8 +47,16 @@ fn decode_hex(input: &str) -> Option<Vec<u8>> {
 #[tokio::main]
 async fn main() -> Result<()> {
     let rpc_url = std::env::var("RPC_URL").unwrap_or_else(|_| "http://127.0.0.1:8899".to_string());
-    let program_id = Pubkey::from_str(
-        &std::env::var("PROGRAM_ID")
+
+    // Gas service program ID
+    let gas_program_id = Pubkey::from_str(
+        &std::env::var("GAS_PROGRAM_ID")
+            .unwrap_or_else(|_| "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP".to_string()),
+    )?;
+
+    // Gateway program ID
+    let gateway_program_id = Pubkey::from_str(
+        &std::env::var("GATEWAY_PROGRAM_ID")
             .unwrap_or_else(|_| "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc".to_string()),
     )?;
 
@@ -59,12 +67,15 @@ async fn main() -> Result<()> {
 
     let rpc = RpcClient::new_with_commitment(rpc_url, CommitmentConfig::confirmed());
 
-    let (config_pda, _bump) = Pubkey::find_program_address(&[b"config"], &program_id);
-    let (event_authority, _ea_bump) =
-        Pubkey::find_program_address(&[b"__event_authority"], &program_id);
-    let (gateway_root_pda, _gw_bump) = Pubkey::find_program_address(&[b"gateway"], &program_id);
+    let (config_pda, _bump) = Pubkey::find_program_address(&[b"config"], &gas_program_id);
+    let (gas_event_authority, _ea_bump) =
+        Pubkey::find_program_address(&[b"__event_authority"], &gas_program_id);
+    let (gateway_root_pda, _gw_bump) =
+        Pubkey::find_program_address(&[b"gateway"], &gateway_program_id);
+    let (gateway_event_authority, _gw_ea_bump) =
+        Pubkey::find_program_address(&[b"__event_authority"], &gateway_program_id);
     let (signing_pda, _sig_bump) =
-        Pubkey::find_program_address(&[b"gtw-call-contract"], &program_id);
+        Pubkey::find_program_address(&[b"gtw-call-contract"], &gateway_program_id);
 
     let destination_chain = std::env::var("DEST_CHAIN").unwrap_or_else(|_| "ethereum".to_string());
     let destination_address = std::env::var("DEST_ADDRESS")
@@ -107,12 +118,12 @@ async fn main() -> Result<()> {
         AccountMeta::new_readonly(config_pda, false), // config_pda: UncheckedAccount
         AccountMeta::new_readonly(system_program::id(), false), // system_program
         // Event CPI injected accounts (must be last two): event_authority and program
-        AccountMeta::new_readonly(event_authority, false),
-        AccountMeta::new_readonly(program_id, false),
+        AccountMeta::new_readonly(gas_event_authority, false),
+        AccountMeta::new_readonly(gas_program_id, false),
     ];
 
     let ix_pay_native = Instruction {
-        program_id,
+        program_id: gas_program_id,
         accounts: accounts_pay_native,
         data: data_pay_native,
     };
@@ -120,7 +131,7 @@ async fn main() -> Result<()> {
     // Ensure GatewayConfig exists for call_contract
     if rpc.get_account(&gateway_root_pda).await.is_err() {
         let ix_init_gateway = Instruction {
-            program_id,
+            program_id: gateway_program_id,
             accounts: vec![
                 AccountMeta::new(payer.pubkey(), true),
                 AccountMeta::new(gateway_root_pda, false),
@@ -151,12 +162,12 @@ async fn main() -> Result<()> {
         AccountMeta::new_readonly(signing_pda, false),          // signing_pda (dummy PDA)
         AccountMeta::new_readonly(gateway_root_pda, false),     // GatewayConfig
         // Event CPI injected accounts (must be last two)
-        AccountMeta::new_readonly(event_authority, false),
-        AccountMeta::new_readonly(program_id, false),
+        AccountMeta::new_readonly(gateway_event_authority, false),
+        AccountMeta::new_readonly(gateway_program_id, false),
     ];
 
     let ix_call = Instruction {
-        program_id,
+        program_id: gateway_program_id,
         accounts: accounts_call,
         data: data_call,
     };

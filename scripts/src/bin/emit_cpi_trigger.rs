@@ -29,7 +29,12 @@ fn serialize_string(value: &str, out: &mut Vec<u8>) {
 #[tokio::main]
 async fn main() -> Result<()> {
     let rpc_url = "http://127.0.0.1:8899".to_string();
-    let program_id = Pubkey::from_str("7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc")?;
+
+    // Gas service program ID
+    let program_id = Pubkey::from_str(
+        &std::env::var("GAS_PROGRAM_ID")
+            .unwrap_or_else(|_| "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP".to_string()),
+    )?;
 
     let payer_path = "/Users/nikos/.config/solana/id.json".to_string();
     let payer = read_keypair_file(Path::new(&payer_path))

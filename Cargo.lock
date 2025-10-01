@@ -1486,6 +1486,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "gas_service"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "solana-program",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

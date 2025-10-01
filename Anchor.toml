@@ -7,9 +7,11 @@ skip-lint = false
 
 [programs.devnet]
 program_tester = "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc"
+gas_service = "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP"
 
 [programs.localnet]
 program_tester = "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc"
+gas_service = "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP"
 
 [registry]
 url = "https://api.apr.dev"
