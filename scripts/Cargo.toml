@@ -21,6 +21,7 @@ serde = { version = "1.0.219", features = ["derive"] }
 anchor-lang = { version = "0.31.1", features = ["event-cpi"] }
 base64 = "0.21"
 bs58 = "0.4"
+borsh = "1.5.7"
 
 [lib]
 name = "scripts"

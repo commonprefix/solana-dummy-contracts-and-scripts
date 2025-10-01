@@ -32,8 +32,8 @@ pub struct NativeGasRefundedEvent {
     pub tx_hash: [u8; 64],
     /// The Gas service config PDA
     pub config_pda: Pubkey,
-    /// The log index
-    pub log_index: u64,
+    /// The log index in format "x.y"
+    pub log_index: String,
     /// The receiver of the refund
     pub receiver: Pubkey,
     /// amount of SOL
@@ -47,8 +47,8 @@ pub struct NativeGasAddedEvent {
     pub config_pda: Pubkey,
     /// Solana transaction signature
     pub tx_hash: [u8; 64],
-    /// The log index
-    pub log_index: u64,
+    /// The log index in format "x.y"
+    pub log_index: String,
     /// The receiver of the refund
     pub refund_address: Pubkey,
     /// amount of SOL added
@@ -74,7 +74,7 @@ pub struct MessageExecuted {
     pub destination_address: Pubkey,
     pub payload_hash: [u8; 32],
     pub source_chain: String,
-    pub message_id: String,
+    pub cc_id: String,
     pub source_address: String,
     pub destination_chain: String,
 }
@@ -162,7 +162,7 @@ pub mod program_tester {
     pub fn refund_native_fees(
         ctx: Context<RefundNativeFees>,
         tx_hash: [u8; 64],
-        log_index: u64,
+        log_index: String,
         fees: u64,
     ) -> Result<()> {
         anchor_lang::prelude::emit_cpi!(NativeGasRefundedEvent {
@@ -179,7 +179,7 @@ pub mod program_tester {
     pub fn add_native_gas(
         ctx: Context<AddNativeGas>,
         tx_hash: [u8; 64],
-        log_index: u64,
+        log_index: String,
         gas_fee_amount: u64,
         refund_address: Pubkey,
     ) -> Result<()> {
@@ -248,7 +248,7 @@ pub mod program_tester {
         ctx: Context<ExecuteMessage>,
         command_id: [u8; 32],
         source_chain: String,
-        message_id: String,
+        cc_id: String,
         source_address: String,
         destination_chain: String,
         destination_address: String,
@@ -262,7 +262,7 @@ pub mod program_tester {
             destination_address: destination_pubkey,
             payload_hash,
             source_chain,
-            message_id,
+            cc_id,
             source_address,
             destination_chain,
         });

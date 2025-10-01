@@ -65,7 +65,7 @@ async fn main() -> Result<()> {
 
     // Add string parameters
     put_string(&cc_chain, &mut data); // source_chain
-    put_string(&cc_id, &mut data); // message_id
+    put_string(&cc_id, &mut data); // cc_id
     put_string(&src_address, &mut data); // source_address
     put_string(&dst_chain, &mut data); // destination_chain
     put_string(&dst_address, &mut data); // destination_address

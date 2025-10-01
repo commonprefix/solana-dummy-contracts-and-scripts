@@ -64,10 +64,15 @@ async fn main() -> Result<()> {
     tx_hash[..32].copy_from_slice(&d1);
     tx_hash[32..].copy_from_slice(&d2);
 
-    let log_index: u64 = std::env::var("LOG_INDEX")
-        .ok()
-        .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or(7);
+    let log_index: String = std::env::var("LOG_INDEX").unwrap_or_else(|_| "1.0".to_string());
+
+    // Validate the log_index format "x.y"
+    if !validate_log_index_format(&log_index) {
+        return Err(anyhow!(
+            "LOG_INDEX must be in format 'x.y' where x and y are numbers, got: {}",
+            log_index
+        ));
+    }
 
     let fees: u64 = std::env::var("REFUND_FEES")
         .ok()
@@ -99,13 +104,27 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+fn serialize_string(value: &str, out: &mut Vec<u8>) {
+    let bytes = value.as_bytes();
+    out.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
+    out.extend_from_slice(bytes);
+}
+
+fn validate_log_index_format(log_index: &str) -> bool {
+    let parts: Vec<&str> = log_index.split('.').collect();
+    if parts.len() != 2 {
+        return false;
+    }
+    parts[0].parse::<u64>().is_ok() && parts[1].parse::<u64>().is_ok()
+}
+
 fn build_refund_native_fees_ix(
     program_id: &Pubkey,
     config_pda: &Pubkey,
     receiver: &Pubkey,
     event_authority: &Pubkey,
     tx_hash: [u8; 64],
-    log_index: u64,
+    log_index: String,
     fees: u64,
 ) -> Result<Instruction> {
     let accounts = vec![
@@ -116,10 +135,10 @@ fn build_refund_native_fees_ix(
     ];
 
     let disc = anchor_method_discriminator("refund_native_fees");
-    let mut data = Vec::with_capacity(8 + 64 + 8 + 8);
+    let mut data = Vec::new();
     data.extend_from_slice(&disc);
     data.extend_from_slice(&tx_hash);
-    data.extend_from_slice(&log_index.to_le_bytes());
+    serialize_string(&log_index, &mut data);
     data.extend_from_slice(&fees.to_le_bytes());
 
     Ok(Instruction {
