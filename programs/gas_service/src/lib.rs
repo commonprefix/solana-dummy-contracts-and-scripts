@@ -21,8 +21,10 @@ pub struct NativeGasRefundedEvent {
     pub tx_hash: [u8; 64],
     /// The Gas service config PDA
     pub config_pda: Pubkey,
-    /// The log index in format "x.y"
-    pub log_index: String,
+    /// Index of the CallContract instruction
+    pub ix_index: u8,
+    /// Index of the CPI event inside inner instructions
+    pub event_ix_index: u8,
     /// The receiver of the refund
     pub receiver: Pubkey,
     /// amount of SOL
@@ -36,11 +38,13 @@ pub struct NativeGasAddedEvent {
     pub config_pda: Pubkey,
     /// Solana transaction signature
     pub tx_hash: [u8; 64],
-    /// The log index in format "x.y"
-    pub log_index: String,
-    /// The receiver of the refund
+    /// Index of the CallContract instruction
+    pub ix_index: u8,
+    /// Index of the CPI event inside inner instructions
+    pub event_ix_index: u8,
+    /// The refund address
     pub refund_address: Pubkey,
-    /// amount of SOL added
+    /// amount of SOL
     pub gas_fee_amount: u64,
 }
 
@@ -103,13 +107,15 @@ pub mod gas_service {
     pub fn refund_native_fees(
         ctx: Context<RefundNativeFees>,
         tx_hash: [u8; 64],
-        log_index: String,
+        ix_index: u8,
+        event_ix_index: u8,
         fees: u64,
     ) -> Result<()> {
         anchor_lang::prelude::emit_cpi!(NativeGasRefundedEvent {
             tx_hash,
             config_pda: ctx.accounts.config_pda.key(),
-            log_index,
+            ix_index,
+            event_ix_index,
             receiver: ctx.accounts.receiver.key(),
             fees,
         });
@@ -120,7 +126,8 @@ pub mod gas_service {
     pub fn add_native_gas(
         ctx: Context<AddNativeGas>,
         tx_hash: [u8; 64],
-        log_index: String,
+        ix_index: u8,
+        event_ix_index: u8,
         gas_fee_amount: u64,
         refund_address: Pubkey,
     ) -> Result<()> {
@@ -128,7 +135,8 @@ pub mod gas_service {
         anchor_lang::prelude::emit_cpi!(NativeGasAddedEvent {
             config_pda: ctx.accounts.config_pda.key(),
             tx_hash,
-            log_index,
+            ix_index,
+            event_ix_index,
             refund_address,
             gas_fee_amount,
         });

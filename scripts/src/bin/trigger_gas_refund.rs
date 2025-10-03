@@ -60,21 +60,33 @@ async fn main() -> Result<()> {
         Err(_) => payer.pubkey(),
     };
 
-    let mut tx_hash = [0u8; 64];
+    // let mut tx_hash = [0u8; 64];
+    // tx_hash.copy_from_slice(
+    //     "4sFqQ9mjg5d61BBnuWeT5spHkM9jr9cAfn6ghgMBMYEK89hJj5gFLCqap3o4Z6779rcmA6ziXBGxU6rJNg3sKVf6"
+    //         .as_bytes(),
+    // );
+
+    let mut tx_hash = [
+        96, 234, 53, 170, 139, 128, 159, 106, 180, 136, 227, 149, 236, 95, 149, 154, 21, 245, 188,
+        217, 46, 43, 133, 179, 63, 169, 153, 86, 49, 219, 100, 18, 107, 141, 155, 116, 138, 75,
+        118, 176, 2, 8, 194, 253, 99, 217, 148, 149, 250, 91, 31, 172, 138, 185, 63, 56, 152, 241,
+        121, 164, 27, 139, 23, 12,
+    ];
+
     let d1 = Sha256::digest(b"refund-tx-hash-part-1");
     let d2 = Sha256::digest(b"refund-tx-hash-part-2");
     tx_hash[..32].copy_from_slice(&d1);
     tx_hash[32..].copy_from_slice(&d2);
 
-    let log_index: String = std::env::var("LOG_INDEX").unwrap_or_else(|_| "1.0".to_string());
+    let ix_index: u8 = std::env::var("IX_INDEX")
+        .ok()
+        .and_then(|s| s.parse::<u8>().ok())
+        .unwrap_or(1);
 
-    // Validate the log_index format "x.y"
-    if !validate_log_index_format(&log_index) {
-        return Err(anyhow!(
-            "LOG_INDEX must be in format 'x.y' where x and y are numbers, got: {}",
-            log_index
-        ));
-    }
+    let event_ix_index: u8 = std::env::var("EVENT_IX_INDEX")
+        .ok()
+        .and_then(|s| s.parse::<u8>().ok())
+        .unwrap_or(1);
 
     let fees: u64 = std::env::var("REFUND_FEES")
         .ok()
@@ -89,7 +101,8 @@ async fn main() -> Result<()> {
         &receiver,
         &event_authority,
         tx_hash,
-        log_index,
+        ix_index,
+        event_ix_index,
         fees,
     )?;
 
@@ -106,27 +119,14 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn serialize_string(value: &str, out: &mut Vec<u8>) {
-    let bytes = value.as_bytes();
-    out.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
-    out.extend_from_slice(bytes);
-}
-
-fn validate_log_index_format(log_index: &str) -> bool {
-    let parts: Vec<&str> = log_index.split('.').collect();
-    if parts.len() != 2 {
-        return false;
-    }
-    parts[0].parse::<u64>().is_ok() && parts[1].parse::<u64>().is_ok()
-}
-
 fn build_refund_native_fees_ix(
     program_id: &Pubkey,
     config_pda: &Pubkey,
     receiver: &Pubkey,
     event_authority: &Pubkey,
     tx_hash: [u8; 64],
-    log_index: String,
+    ix_index: u8,
+    event_ix_index: u8,
     fees: u64,
 ) -> Result<Instruction> {
     let accounts = vec![
@@ -140,7 +140,8 @@ fn build_refund_native_fees_ix(
     let mut data = Vec::new();
     data.extend_from_slice(&disc);
     data.extend_from_slice(&tx_hash);
-    serialize_string(&log_index, &mut data);
+    data.push(ix_index);
+    data.push(event_ix_index);
     data.extend_from_slice(&fees.to_le_bytes());
 
     Ok(Instruction {

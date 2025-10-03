@@ -94,15 +94,17 @@ async fn main() -> Result<()> {
     println!("Step 2: Adding native gas...");
     let mut tx_hash = [0u8; 64];
     tx_hash.copy_from_slice(call_contract_sig.as_ref());
-    let log_index = std::env::var("LOG_INDEX").unwrap_or_else(|_| "0.0".to_string()); // Using "0.0" as default log index
 
-    // Validate the log_index format "x.y"
-    if !validate_log_index_format(&log_index) {
-        return Err(anyhow!(
-            "LOG_INDEX must be in format 'x.y' where x and y are numbers, got: {}",
-            log_index
-        ));
-    }
+    let ix_index: u8 = std::env::var("IX_INDEX")
+        .ok()
+        .and_then(|s| s.parse::<u8>().ok())
+        .unwrap_or(1);
+
+    let event_ix_index: u8 = std::env::var("EVENT_IX_INDEX")
+        .ok()
+        .and_then(|s| s.parse::<u8>().ok())
+        .unwrap_or(1);
+
     let refund_address = payer.pubkey();
 
     let add_gas_sig = add_native_gas(
@@ -112,7 +114,8 @@ async fn main() -> Result<()> {
         &gas_event_authority,
         &gateway_root_pda,
         tx_hash,
-        log_index,
+        ix_index,
+        event_ix_index,
         gas_fee_amount,
         refund_address,
     )
@@ -164,14 +167,6 @@ async fn call_contract(
     send_ix(rpc, payer, &[ix]).await
 }
 
-fn validate_log_index_format(log_index: &str) -> bool {
-    let parts: Vec<&str> = log_index.split('.').collect();
-    if parts.len() != 2 {
-        return false;
-    }
-    parts[0].parse::<u64>().is_ok() && parts[1].parse::<u64>().is_ok()
-}
-
 async fn add_native_gas(
     rpc: &RpcClient,
     payer: &solana_sdk::signature::Keypair,
@@ -179,14 +174,16 @@ async fn add_native_gas(
     event_authority: &Pubkey,
     config_pda: &Pubkey,
     tx_hash: [u8; 64],
-    log_index: String,
+    ix_index: u8,
+    event_ix_index: u8,
     gas_fee_amount: u64,
     refund_address: Pubkey,
 ) -> Result<solana_sdk::signature::Signature> {
     let mut data = Vec::new();
     data.extend_from_slice(&anchor_method_discriminator("add_native_gas"));
     data.extend_from_slice(&tx_hash);
-    serialize_string(&log_index, &mut data);
+    data.push(ix_index);
+    data.push(event_ix_index);
     data.extend_from_slice(&gas_fee_amount.to_le_bytes());
     data.extend_from_slice(refund_address.as_ref());
 
