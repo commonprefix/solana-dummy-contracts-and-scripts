@@ -99,3 +99,7 @@ path = "src/bin/trigger_signers_rotated.rs"
 [[bin]]
 name = "initialize_programs"
 path = "src/bin/initialize_programs.rs"
+
+[[bin]]
+name = "trigger_cpi_call_contract"
+path = "src/bin/trigger_cpi_call_contract.rs"

@@ -19,4 +19,5 @@ idl-build = ["anchor-lang/idl-build"]
 [dependencies]
 anchor-lang = { version = "0.31.1", features = ["event-cpi"] }
 solana-program = "2.2"
+program_tester = { path = "../program_tester", features = ["cpi"] }
 

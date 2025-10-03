@@ -1490,6 +1490,7 @@ name = "gas_service"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "program_tester",
  "solana-program",
 ]
 
