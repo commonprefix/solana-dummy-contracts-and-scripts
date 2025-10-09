@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
     // Gas service program ID
     let program_id = Pubkey::from_str(
         &std::env::var("GAS_PROGRAM_ID")
-            .unwrap_or_else(|_| "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP".to_string()),
+            .unwrap_or_else(|_| "CJ9f8WFdm3q38pmg426xQf7uum7RqvrmS9R58usHwNX7".to_string()),
     )?;
 
     let payer_path = "/Users/nikos/.config/solana/id.json".to_string();
@@ -55,15 +55,15 @@ async fn main() -> Result<()> {
         arr
     };
     let refund_address = payer.pubkey();
-    let gas_fee_amount: u64 = 1_000;
+    let amount: u64 = 1_000;
 
     let mut data: Vec<u8> = Vec::with_capacity(8 + 128);
     data.extend_from_slice(&anchor_sighash("pay_native_for_contract_call"));
     serialize_string(&destination_chain, &mut data);
     serialize_string(&destination_address, &mut data);
     data.extend_from_slice(&payload_hash);
+    data.extend_from_slice(&amount.to_le_bytes());
     data.extend_from_slice(refund_address.as_ref());
-    data.extend_from_slice(&gas_fee_amount.to_le_bytes());
 
     let accounts = vec![
         AccountMeta::new(payer.pubkey(), true), // payer: Signer, mut

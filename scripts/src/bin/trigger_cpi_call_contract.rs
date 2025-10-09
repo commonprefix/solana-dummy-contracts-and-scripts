@@ -38,13 +38,13 @@ async fn main() -> Result<()> {
     // Gas service program ID
     let gas_program_id = Pubkey::from_str(
         &std::env::var("GAS_PROGRAM_ID")
-            .unwrap_or_else(|_| "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP".to_string()),
+            .unwrap_or_else(|_| "CJ9f8WFdm3q38pmg426xQf7uum7RqvrmS9R58usHwNX7".to_string()),
     )?;
 
     // Gateway program ID (program_tester)
     let gateway_program_id = Pubkey::from_str(
         &std::env::var("GATEWAY_PROGRAM_ID")
-            .unwrap_or_else(|_| "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc".to_string()),
+            .unwrap_or_else(|_| "8YsLGnLV2KoyxdksgiAi3gh1WvhMrznA2toKWqyz91bR".to_string()),
     )?;
 
     let payer_path = std::env::var("PAYER")

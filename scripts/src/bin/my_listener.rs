@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
     let (mut sub, _unsub) = pub_sub_client
         .logs_subscribe(
             RpcTransactionLogsFilter::Mentions(vec![
-                "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc".to_string(),
+                "8YsLGnLV2KoyxdksgiAi3gh1WvhMrznA2toKWqyz91bR".to_string(),
             ]),
             RpcTransactionLogsConfig {
                 commitment: Some(CommitmentConfig::confirmed()),
@@ -73,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
                                     let keys = &raw_msg.account_keys;
                                     if (ci.program_id_index as usize) < keys.len()
                                         && keys[ci.program_id_index as usize]
-                                            == "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc"
+                                            == "8YsLGnLV2KoyxdksgiAi3gh1WvhMrznA2toKWqyz91bR"
                                     {
                                         let bytes = match bs58::decode(&ci.data).into_vec() {
                                             Ok(v) => v,

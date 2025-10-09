@@ -24,7 +24,7 @@ async fn main() -> anyhow::Result<()> {
     let vec_sigs: Vec<Signature> = vec![];
 
     let rpc_url = "http://localhost:8899".to_string();
-    let program_id = Pubkey::from_str("7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc")?;
+    let program_id = Pubkey::from_str("8YsLGnLV2KoyxdksgiAi3gh1WvhMrznA2toKWqyz91bR")?;
     let config = GetConfirmedSignaturesForAddress2Config {
         commitment,
         limit: Some(limit),

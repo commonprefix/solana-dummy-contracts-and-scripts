@@ -34,13 +34,13 @@ async fn main() -> Result<()> {
     // Gas service program ID
     let gas_program_id = Pubkey::from_str(
         &std::env::var("GAS_PROGRAM_ID")
-            .unwrap_or_else(|_| "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP".to_string()),
+            .unwrap_or_else(|_| "CJ9f8WFdm3q38pmg426xQf7uum7RqvrmS9R58usHwNX7".to_string()),
     )?;
 
     // Gateway program ID (for call_contract)
     let gateway_program_id = Pubkey::from_str(
         &std::env::var("GATEWAY_PROGRAM_ID")
-            .unwrap_or_else(|_| "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc".to_string()),
+            .unwrap_or_else(|_| "8YsLGnLV2KoyxdksgiAi3gh1WvhMrznA2toKWqyz91bR".to_string()),
     )?;
 
     let payer_path = std::env::var("PAYER")
@@ -92,18 +92,9 @@ async fn main() -> Result<()> {
 
     // Step 2: Add native gas for the contract call
     println!("Step 2: Adding native gas...");
-    let mut tx_hash = [0u8; 64];
-    tx_hash.copy_from_slice(call_contract_sig.as_ref());
 
-    let ix_index: u8 = std::env::var("IX_INDEX")
-        .ok()
-        .and_then(|s| s.parse::<u8>().ok())
-        .unwrap_or(1);
-
-    let event_ix_index: u8 = std::env::var("EVENT_IX_INDEX")
-        .ok()
-        .and_then(|s| s.parse::<u8>().ok())
-        .unwrap_or(1);
+    // Create a message_id from the transaction signature
+    let message_id = format!("3Yoe1V1qMFERAVXadHkrnXWQ2STa7Yd8rydoWxouXQrpwtDZGpuVPdmdJSA9HiNQi91aFP5EumZrvAqZcQa84Ens-2.1");
 
     let refund_address = payer.pubkey();
 
@@ -113,9 +104,7 @@ async fn main() -> Result<()> {
         gas_program_id,
         &gas_event_authority,
         &gateway_root_pda,
-        tx_hash,
-        ix_index,
-        event_ix_index,
+        message_id.clone(),
         gas_fee_amount,
         refund_address,
     )
@@ -123,7 +112,7 @@ async fn main() -> Result<()> {
     println!("Add native gas tx: {}", add_gas_sig);
 
     println!("Successfully completed call_contract followed by add_native_gas!");
-    println!("Contract call tx hash: {:?}", tx_hash);
+    println!("Message ID: {}", message_id);
     println!("Gas amount added: {}", gas_fee_amount);
 
     Ok(())
@@ -173,18 +162,14 @@ async fn add_native_gas(
     program_id: Pubkey,
     event_authority: &Pubkey,
     config_pda: &Pubkey,
-    tx_hash: [u8; 64],
-    ix_index: u8,
-    event_ix_index: u8,
-    gas_fee_amount: u64,
+    message_id: String,
+    amount: u64,
     refund_address: Pubkey,
 ) -> Result<solana_sdk::signature::Signature> {
     let mut data = Vec::new();
     data.extend_from_slice(&anchor_method_discriminator("add_native_gas"));
-    data.extend_from_slice(&tx_hash);
-    data.push(ix_index);
-    data.push(event_ix_index);
-    data.extend_from_slice(&gas_fee_amount.to_le_bytes());
+    serialize_string(&message_id, &mut data);
+    data.extend_from_slice(&amount.to_le_bytes());
     data.extend_from_slice(refund_address.as_ref());
 
     let accounts = vec![

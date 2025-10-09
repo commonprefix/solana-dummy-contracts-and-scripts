@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
     let rpc_url = std::env::var("RPC_URL").unwrap_or_else(|_| "http://127.0.0.1:8899".to_string());
     let program_id = Pubkey::from_str(
         &std::env::var("PROGRAM_ID")
-            .unwrap_or_else(|_| "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc".to_string()),
+            .unwrap_or_else(|_| "8YsLGnLV2KoyxdksgiAi3gh1WvhMrznA2toKWqyz91bR".to_string()),
     )?;
 
     let payer_path = std::env::var("PAYER")
@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
     let token_id = [1u8; 32];
     let source_address = payer.pubkey();
     let source_token_account = payer.pubkey();
-    let destination_chain = std::env::var("DEST_CHAIN").unwrap_or_else(|_| "ethereum".to_string());
+    let destination_chain = std::env::var("DEST_CHAIN").unwrap_or_else(|_| "solana-2".to_string());
     let destination_address = vec![2u8, 3, 4, 5];
     let amount: u64 = 12345;
     let data_hash = {
@@ -142,7 +142,7 @@ async fn main() -> Result<()> {
 
     // Send both instructions in the same transaction
     let recent_blockhash = rpc.get_latest_blockhash().await?;
-    let mut tx = Transaction::new_with_payer(&[ix_call, ix_its], Some(&payer.pubkey()));
+    let mut tx = Transaction::new_with_payer(&[ix_its, ix_call], Some(&payer.pubkey()));
     tx.sign(&[&payer], recent_blockhash);
     let sig = rpc.send_and_confirm_transaction(&tx).await?;
     println!("Sent call_contract + interchain_transfer tx: {}", sig);

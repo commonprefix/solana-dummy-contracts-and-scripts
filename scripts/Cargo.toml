@@ -103,3 +103,7 @@ path = "src/bin/initialize_programs.rs"
 [[bin]]
 name = "trigger_cpi_call_contract"
 path = "src/bin/trigger_cpi_call_contract.rs"
+
+[[bin]]
+name = "trigger_multiple_contract_calls"
+path = "src/bin/trigger_multiple_contract_calls.rs"

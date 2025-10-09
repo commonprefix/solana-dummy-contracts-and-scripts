@@ -173,7 +173,15 @@ async fn main() -> Result<()> {
     };
 
     let recent_blockhash = rpc.get_latest_blockhash().await?;
-    let mut tx = Transaction::new_with_payer(&[ix_pay_native, ix_call], Some(&payer.pubkey()));
+    let mut tx = Transaction::new_with_payer(
+        &[
+            ix_pay_native.clone(),
+            ix_call.clone(),
+            ix_pay_native.clone(),
+            ix_call.clone(),
+        ],
+        Some(&payer.pubkey()),
+    );
     tx.sign(&[&payer], recent_blockhash);
 
     let sig = rpc.send_and_confirm_transaction(&tx).await?;

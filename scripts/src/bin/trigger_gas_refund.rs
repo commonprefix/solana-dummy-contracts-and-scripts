@@ -12,8 +12,6 @@ use solana_sdk::transaction::Transaction;
 
 const CONFIG_SEED: &[u8] = b"config";
 
-const EVENT_IX_TAG_LE: [u8; 8] = [0xe4, 0x45, 0xa5, 0x2e, 0x51, 0xcb, 0x9a, 0x1d];
-
 fn anchor_event_struct_discriminator(type_name: &str) -> [u8; 8] {
     // Anchor event struct discriminator = sha256("event:<TypeName>")[..8]
     let mut hasher = Sha256::new();
@@ -41,7 +39,7 @@ async fn main() -> Result<()> {
     // Gas service program ID
     let program_id = Pubkey::from_str(
         &std::env::var("GAS_PROGRAM_ID")
-            .unwrap_or_else(|_| "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP".to_string()),
+            .unwrap_or_else(|_| "CJ9f8WFdm3q38pmg426xQf7uum7RqvrmS9R58usHwNX7".to_string()),
     )?;
 
     let payer_path = std::env::var("PAYER")
@@ -60,35 +58,10 @@ async fn main() -> Result<()> {
         Err(_) => payer.pubkey(),
     };
 
-    // let mut tx_hash = [0u8; 64];
-    // tx_hash.copy_from_slice(
-    //     "4sFqQ9mjg5d61BBnuWeT5spHkM9jr9cAfn6ghgMBMYEK89hJj5gFLCqap3o4Z6779rcmA6ziXBGxU6rJNg3sKVf6"
-    //         .as_bytes(),
-    // );
+    let message_id =
+        std::env::var("MESSAGE_ID").unwrap_or_else(|_| "3Yoe1V1qMFERAVXadHkrnXWQ2STa7Yd8rydoWxouXQrpwtDZGpuVPdmdJSA9HiNQi91aFP5EumZrvAqZcQa84Ens-2.1".to_string());
 
-    let mut tx_hash = [
-        96, 234, 53, 170, 139, 128, 159, 106, 180, 136, 227, 149, 236, 95, 149, 154, 21, 245, 188,
-        217, 46, 43, 133, 179, 63, 169, 153, 86, 49, 219, 100, 18, 107, 141, 155, 116, 138, 75,
-        118, 176, 2, 8, 194, 253, 99, 217, 148, 149, 250, 91, 31, 172, 138, 185, 63, 56, 152, 241,
-        121, 164, 27, 139, 23, 12,
-    ];
-
-    let d1 = Sha256::digest(b"refund-tx-hash-part-1");
-    let d2 = Sha256::digest(b"refund-tx-hash-part-2");
-    tx_hash[..32].copy_from_slice(&d1);
-    tx_hash[32..].copy_from_slice(&d2);
-
-    let ix_index: u8 = std::env::var("IX_INDEX")
-        .ok()
-        .and_then(|s| s.parse::<u8>().ok())
-        .unwrap_or(1);
-
-    let event_ix_index: u8 = std::env::var("EVENT_IX_INDEX")
-        .ok()
-        .and_then(|s| s.parse::<u8>().ok())
-        .unwrap_or(1);
-
-    let fees: u64 = std::env::var("REFUND_FEES")
+    let amount: u64 = std::env::var("REFUND_AMOUNT")
         .ok()
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or(500);
@@ -100,21 +73,17 @@ async fn main() -> Result<()> {
         &config_pda,
         &receiver,
         &event_authority,
-        tx_hash,
-        ix_index,
-        event_ix_index,
-        fees,
+        message_id.clone(),
+        amount,
     )?;
 
     let sig = send_ix(&rpc, &payer, &[ix]).await?;
     println!("Sent refund_native_fees tx: {}", sig);
+    println!("Message ID: {}", message_id);
+    println!("Refund amount: {}", amount);
 
-    println!("EVENT_IX_TAG_LE: {:#04x?}", EVENT_IX_TAG_LE);
-    let refunded_disc = anchor_event_struct_discriminator("NativeGasRefundedEvent");
-    println!(
-        "NativeGasRefundedEvent discriminator: {:#04x?}",
-        refunded_disc
-    );
+    let refunded_disc = anchor_event_struct_discriminator("GasRefundedEvent");
+    println!("GasRefundedEvent discriminator: {:#04x?}", refunded_disc);
 
     Ok(())
 }
@@ -124,10 +93,8 @@ fn build_refund_native_fees_ix(
     config_pda: &Pubkey,
     receiver: &Pubkey,
     event_authority: &Pubkey,
-    tx_hash: [u8; 64],
-    ix_index: u8,
-    event_ix_index: u8,
-    fees: u64,
+    message_id: String,
+    amount: u64,
 ) -> Result<Instruction> {
     let accounts = vec![
         AccountMeta::new_readonly(*config_pda, false),
@@ -139,10 +106,13 @@ fn build_refund_native_fees_ix(
     let disc = anchor_method_discriminator("refund_native_fees");
     let mut data = Vec::new();
     data.extend_from_slice(&disc);
-    data.extend_from_slice(&tx_hash);
-    data.push(ix_index);
-    data.push(event_ix_index);
-    data.extend_from_slice(&fees.to_le_bytes());
+
+    // Serialize message_id as String
+    let message_id_bytes = message_id.as_bytes();
+    data.extend_from_slice(&(message_id_bytes.len() as u32).to_le_bytes());
+    data.extend_from_slice(message_id_bytes);
+
+    data.extend_from_slice(&amount.to_le_bytes());
 
     Ok(Instruction {
         program_id: *program_id,

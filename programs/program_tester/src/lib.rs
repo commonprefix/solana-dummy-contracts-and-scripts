@@ -2,17 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anyhow::anyhow;
 
-declare_id!("7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc");
-
-#[event]
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct CallContractEvent {
-    pub sender_key: Pubkey,
-    pub payload_hash: [u8; 32],
-    pub destination_chain: String,
-    pub destination_contract_address: String,
-    pub payload: Vec<u8>,
-}
+declare_id!("8YsLGnLV2KoyxdksgiAi3gh1WvhMrznA2toKWqyz91bR");
 
 #[event]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -21,7 +11,7 @@ pub struct MessageApprovedEvent {
     pub destination_address: Pubkey,
     pub payload_hash: [u8; 32],
     pub source_chain: String,
-    pub message_id: String,
+    pub cc_id: String,
     pub source_address: String,
     pub destination_chain: String,
 }
@@ -36,6 +26,23 @@ pub struct MessageExecutedEvent {
     pub cc_id: String,
     pub source_address: String,
     pub destination_chain: String,
+}
+
+#[event]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VerifierSetRotatedEvent {
+    pub epoch: U256,
+    pub verifier_set_hash: [u8; 32],
+}
+
+#[event]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CallContractEvent {
+    pub sender: Pubkey,
+    pub payload_hash: [u8; 32],
+    pub destination_chain: String,
+    pub destination_contract_address: String,
+    pub payload: Vec<u8>,
 }
 
 #[event]
@@ -82,15 +89,6 @@ pub struct TokenMetadataRegistered {
 #[derive(Debug, Clone, PartialEq, Eq, AnchorSerialize, AnchorDeserialize)]
 pub struct U256(pub [u8; 32]);
 
-#[event]
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct VerifierSetRotatedEvent {
-    /// The epoch number as a 256-bit integer in little-endian format
-    pub epoch: U256,
-    /// Hash of the new verifier set
-    pub verifier_set_hash: [u8; 32],
-}
-
 #[program]
 pub mod program_tester {
     use std::str::FromStr;
@@ -105,7 +103,7 @@ pub mod program_tester {
         payload: Vec<u8>,
     ) -> Result<()> {
         anchor_lang::prelude::emit_cpi!(CallContractEvent {
-            sender_key: ctx.accounts.calling_program.key(),
+            sender: ctx.accounts.calling_program.key(),
             destination_chain,
             destination_contract_address,
             payload_hash,
@@ -139,7 +137,7 @@ pub mod program_tester {
             destination_address,
             payload_hash: message.leaf.message.payload_hash,
             source_chain: cc_id.chain.clone(),
-            message_id: cc_id.id.clone(),
+            cc_id: cc_id.id.clone(),
             source_address: message.leaf.message.source_address.clone(),
             destination_chain: message.leaf.message.destination_chain.clone(),
         });

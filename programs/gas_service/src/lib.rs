@@ -1,51 +1,78 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::pubkey::Pubkey;
 
-declare_id!("H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP");
+declare_id!("CJ9f8WFdm3q38pmg426xQf7uum7RqvrmS9R58usHwNX7");
 
+/// Represents the event emitted when native gas is paid for a contract call.
 #[event]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct NativeGasPaidForContractCallEvent {
-    pub config_pda: Pubkey,
+pub struct GasPaidEvent {
+    /// The sender/payer of gas
+    pub sender: Pubkey,
+    /// Destination chain on the Axelar network
     pub destination_chain: String,
+    /// Destination address on the Axelar network
     pub destination_address: String,
+    /// The payload hash for the event we're paying for
     pub payload_hash: [u8; 32],
-    pub refund_address: Pubkey,
-    pub gas_fee_amount: u64,
-}
-
-#[event]
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct NativeGasRefundedEvent {
-    /// Solana transaction signature
-    pub tx_hash: [u8; 64],
-    /// The Gas service config PDA
-    pub config_pda: Pubkey,
-    /// Index of the CallContract instruction
-    pub ix_index: u8,
-    /// Index of the CPI event inside inner instructions
-    pub event_ix_index: u8,
-    /// The receiver of the refund
-    pub receiver: Pubkey,
-    /// amount of SOL
-    pub fees: u64,
-}
-
-#[event]
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct NativeGasAddedEvent {
-    /// The Gas service config PDA
-    pub config_pda: Pubkey,
-    /// Solana transaction signature
-    pub tx_hash: [u8; 64],
-    /// Index of the CallContract instruction
-    pub ix_index: u8,
-    /// Index of the CPI event inside inner instructions
-    pub event_ix_index: u8,
+    /// The amount of SOL paid
+    pub amount: u64,
     /// The refund address
     pub refund_address: Pubkey,
-    /// amount of SOL
-    pub gas_fee_amount: u64,
+    //
+    // SPL token fields
+    //
+    /// Mint of the token
+    pub mint: Option<Pubkey>,
+    /// Token program id
+    pub token_program_id: Option<Pubkey>,
+    /// Sender token account
+    pub sender_token_account: Option<Pubkey>,
+}
+
+type MessageId = String;
+/// Represents the event emitted when native gas is added.
+#[event]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct GasAddedEvent {
+    /// The sender/payer of gas
+    pub sender: Pubkey,
+    /// Message Id
+    pub message_id: MessageId,
+    /// The amount of SOL added
+    pub amount: u64,
+    /// The refund address
+    pub refund_address: Pubkey,
+    //
+    // SPL token fields
+    //
+    /// Mint of the token
+    pub mint: Option<Pubkey>,
+    /// Token program id
+    pub token_program_id: Option<Pubkey>,
+    /// Sender token account
+    pub sender_token_account: Option<Pubkey>,
+}
+
+/// Represents the event emitted when native gas is refunded.
+#[event]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct GasRefundedEvent {
+    /// The receiver of the refund
+    pub receiver: Pubkey,
+    /// Message Id
+    pub message_id: MessageId,
+    /// The amount of SOL refunded
+    pub amount: u64,
+    //
+    // SPL token fields
+    //
+    /// Mint of the token
+    pub mint: Option<Pubkey>,
+    /// Token program id
+    pub token_program_id: Option<Pubkey>,
+    /// Receiver token account
+    pub receiver_token_account: Option<Pubkey>,
 }
 
 #[program]
@@ -87,18 +114,19 @@ pub mod gas_service {
         destination_chain: String,
         destination_address: String,
         payload_hash: [u8; 32],
+        amount: u64,
         refund_address: Pubkey,
-        gas_fee_amount: u64,
     ) -> Result<()> {
-        let config_pda_key = ctx.accounts.config_pda.key();
-
-        anchor_lang::prelude::emit_cpi!(NativeGasPaidForContractCallEvent {
-            config_pda: config_pda_key,
+        anchor_lang::prelude::emit_cpi!(GasPaidEvent {
+            sender: ctx.accounts.payer.key(),
             destination_chain,
             destination_address,
             payload_hash,
+            amount,
             refund_address,
-            gas_fee_amount,
+            mint: None,
+            token_program_id: None,
+            sender_token_account: None,
         });
 
         Ok(())
@@ -106,18 +134,16 @@ pub mod gas_service {
 
     pub fn refund_native_fees(
         ctx: Context<RefundNativeFees>,
-        tx_hash: [u8; 64],
-        ix_index: u8,
-        event_ix_index: u8,
-        fees: u64,
+        message_id: String,
+        amount: u64,
     ) -> Result<()> {
-        anchor_lang::prelude::emit_cpi!(NativeGasRefundedEvent {
-            tx_hash,
-            config_pda: ctx.accounts.config_pda.key(),
-            ix_index,
-            event_ix_index,
+        anchor_lang::prelude::emit_cpi!(GasRefundedEvent {
             receiver: ctx.accounts.receiver.key(),
-            fees,
+            message_id,
+            amount,
+            mint: None,
+            token_program_id: None,
+            receiver_token_account: None,
         });
 
         Ok(())
@@ -125,20 +151,19 @@ pub mod gas_service {
 
     pub fn add_native_gas(
         ctx: Context<AddNativeGas>,
-        tx_hash: [u8; 64],
-        ix_index: u8,
-        event_ix_index: u8,
-        gas_fee_amount: u64,
+        message_id: String,
+        amount: u64,
         refund_address: Pubkey,
     ) -> Result<()> {
         // Simply emit the event without any on-chain logic (mocked version)
-        anchor_lang::prelude::emit_cpi!(NativeGasAddedEvent {
-            config_pda: ctx.accounts.config_pda.key(),
-            tx_hash,
-            ix_index,
-            event_ix_index,
+        anchor_lang::prelude::emit_cpi!(GasAddedEvent {
+            sender: ctx.accounts.sender.key(),
+            message_id,
+            amount,
             refund_address,
-            gas_fee_amount,
+            mint: None,
+            token_program_id: None,
+            sender_token_account: None,
         });
 
         Ok(())

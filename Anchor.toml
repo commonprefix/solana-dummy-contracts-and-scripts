@@ -10,8 +10,8 @@ program_tester = "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc"
 gas_service = "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP"
 
 [programs.localnet]
-program_tester = "7RdSDLUUy37Wqc6s9ebgo52AwhGiw4XbJWZJgidQ1fJc"
-gas_service = "H9XpBVCnYxr7cHd66nqtD8RSTrKY6JC32XVu2zT2kBmP"
+program_tester = "8YsLGnLV2KoyxdksgiAi3gh1WvhMrznA2toKWqyz91bR"
+gas_service = "CJ9f8WFdm3q38pmg426xQf7uum7RqvrmS9R58usHwNX7"
 
 [registry]
 url = "https://api.apr.dev"
