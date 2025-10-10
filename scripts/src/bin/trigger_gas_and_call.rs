@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
     let (signing_pda, _sig_bump) =
         Pubkey::find_program_address(&[b"gtw-call-contract"], &gateway_program_id);
 
-    let destination_chain = std::env::var("DEST_CHAIN").unwrap_or_else(|_| "solana-2".to_string());
+    let destination_chain = std::env::var("DEST_CHAIN").unwrap_or_else(|_| "solana-5".to_string());
     let destination_address = std::env::var("DEST_ADDRESS")
         .unwrap_or_else(|_| "CJ9f8WFdm3q38pmg426xQf7uum7RqvrmS9R58usHwNX7".to_string());
     let payload: Vec<u8> = std::env::var("PAYLOAD_HEX")

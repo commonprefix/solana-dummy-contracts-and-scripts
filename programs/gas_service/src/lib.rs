@@ -15,19 +15,12 @@ pub struct GasPaidEvent {
     pub destination_address: String,
     /// The payload hash for the event we're paying for
     pub payload_hash: [u8; 32],
-    /// The amount of SOL paid
+    /// The amount paid
     pub amount: u64,
     /// The refund address
     pub refund_address: Pubkey,
-    //
-    // SPL token fields
-    //
-    /// Mint of the token
-    pub mint: Option<Pubkey>,
-    /// Token program id
-    pub token_program_id: Option<Pubkey>,
-    /// Sender token account
-    pub sender_token_account: Option<Pubkey>,
+    /// Optional SPL token account (sender)
+    pub spl_token_account: Option<Pubkey>,
 }
 
 type MessageId = String;
@@ -38,20 +31,13 @@ pub struct GasAddedEvent {
     /// The sender/payer of gas
     pub sender: Pubkey,
     /// Message Id
-    pub message_id: MessageId,
-    /// The amount of SOL added
+    pub message_id: String,
+    /// The amount added
     pub amount: u64,
     /// The refund address
     pub refund_address: Pubkey,
-    //
-    // SPL token fields
-    //
-    /// Mint of the token
-    pub mint: Option<Pubkey>,
-    /// Token program id
-    pub token_program_id: Option<Pubkey>,
-    /// Sender token account
-    pub sender_token_account: Option<Pubkey>,
+    /// Optional SPL token account (sender)
+    pub spl_token_account: Option<Pubkey>,
 }
 
 /// Represents the event emitted when native gas is refunded.
@@ -61,18 +47,11 @@ pub struct GasRefundedEvent {
     /// The receiver of the refund
     pub receiver: Pubkey,
     /// Message Id
-    pub message_id: MessageId,
-    /// The amount of SOL refunded
+    pub message_id: String,
+    /// The amount refunded
     pub amount: u64,
-    //
-    // SPL token fields
-    //
-    /// Mint of the token
-    pub mint: Option<Pubkey>,
-    /// Token program id
-    pub token_program_id: Option<Pubkey>,
-    /// Receiver token account
-    pub receiver_token_account: Option<Pubkey>,
+    /// Optional SPL token account (receiver)
+    pub spl_token_account: Option<Pubkey>,
 }
 
 #[program]
@@ -124,9 +103,7 @@ pub mod gas_service {
             payload_hash,
             amount,
             refund_address,
-            mint: None,
-            token_program_id: None,
-            sender_token_account: None,
+            spl_token_account: None,
         });
 
         Ok(())
@@ -141,9 +118,7 @@ pub mod gas_service {
             receiver: ctx.accounts.receiver.key(),
             message_id,
             amount,
-            mint: None,
-            token_program_id: None,
-            receiver_token_account: None,
+            spl_token_account: None,
         });
 
         Ok(())
@@ -161,9 +136,7 @@ pub mod gas_service {
             message_id,
             amount,
             refund_address,
-            mint: None,
-            token_program_id: None,
-            sender_token_account: None,
+            spl_token_account: None,
         });
 
         Ok(())

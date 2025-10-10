@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
     let token_id = [1u8; 32];
     let source_address = payer.pubkey();
     let source_token_account = payer.pubkey();
-    let destination_chain = std::env::var("DEST_CHAIN").unwrap_or_else(|_| "solana-2".to_string());
+    let destination_chain = std::env::var("DEST_CHAIN").unwrap_or_else(|_| "solana-5".to_string());
     let destination_address = vec![2u8, 3, 4, 5];
     let amount: u64 = 12345;
     let data_hash = {
